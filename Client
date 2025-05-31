@@ -1,0 +1,51 @@
+import java.io.*;
+import java.net.*;
+
+public class ChatClient {
+    public static void main(String[] args) {
+        try {
+            Socket socket = new Socket("localhost", 1234);
+            System.out.println("Connected to the server!");
+
+            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+            BufferedReader clientInput = new BufferedReader(new InputStreamReader(System.in));
+
+            Thread listenerThread = new Thread(() -> {
+                try {
+                    String encryptedFromServer, plainFromServer;
+                    while ((encryptedFromServer = in.readLine()) != null) {
+                        plainFromServer = AESUtil.decrypt(encryptedFromServer);
+                        System.out.println("\nServer: " + plainFromServer);
+                        System.out.print("You: ");
+                    }
+                } catch (Exception e) {
+                    System.out.println("Connection closed.");
+                }
+            });
+            listenerThread.start();
+
+            String plainToServer, encryptedToServer;
+            while (true) {
+                System.out.print("You: ");
+                plainToServer = clientInput.readLine();
+
+                if (plainToServer.equalsIgnoreCase("exit")) {
+                    out.println("exit");
+                    System.out.println("Disconnected.");
+                    break;
+                }
+
+                encryptedToServer = AESUtil.encrypt(plainToServer);
+                out.println(encryptedToServer);
+            }
+
+            socket.close();
+
+        } catch (Exception e) {
+            System.out.println("Error: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}
+
